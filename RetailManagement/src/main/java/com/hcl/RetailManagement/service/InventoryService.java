@@ -39,6 +39,23 @@ public class InventoryService {
                 );
     }
 
+    public List<Inventory> getByWarehouse(Integer warehouseId) {
+        return inventoryRepository.findByWarehouse_WarehouseId(warehouseId);
+    }
+
+    public List<Inventory> getByProduct(Integer productId) {
+        return inventoryRepository.findByProduct_ProductId(productId);
+    }
+
+    public List<Inventory> getLowStockInventory() {
+        return inventoryRepository.findAll().stream()
+                .filter(i -> i.getProduct() != null && 
+                             i.getProduct().getReorderLevel() != null && 
+                             i.getQuantity() != null &&
+                             i.getQuantity() <= i.getProduct().getReorderLevel())
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     public Inventory updateInventory(
             Integer id,
             Inventory details) {
@@ -47,10 +64,10 @@ public class InventoryService {
                 .orElseThrow(() ->
                         new RuntimeException("Inventory not found"));
 
-        inventory.setProduct(details.getProduct());
-        inventory.setWarehouse(details.getWarehouse());
-        inventory.setQuantity(details.getQuantity());
-        inventory.setReservedQuantity(details.getReservedQuantity());
+        if (details.getProduct() != null) inventory.setProduct(details.getProduct());
+        if (details.getWarehouse() != null) inventory.setWarehouse(details.getWarehouse());
+        if (details.getQuantity() != null) inventory.setQuantity(details.getQuantity());
+        if (details.getReservedQuantity() != null) inventory.setReservedQuantity(details.getReservedQuantity());
 
         return inventoryRepository.save(inventory);
     }

@@ -25,6 +25,10 @@ public class OrderItemService {
         return repository.findAll();
     }
 
+    public List<OrderItem> getItemsByOrderId(Integer orderId) {
+        return repository.findByOrder_OrderId(orderId);
+    }
+
     public Optional<OrderItem> getItemById(Integer id) {
         return repository.findById(id);
     }

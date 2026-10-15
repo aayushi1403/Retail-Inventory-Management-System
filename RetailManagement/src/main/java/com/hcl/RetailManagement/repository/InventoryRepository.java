@@ -12,4 +12,8 @@ public interface InventoryRepository
             Integer productId,
             Integer warehouseId
     );
+
+    java.util.List<Inventory> findByWarehouse_WarehouseId(Integer warehouseId);
+
+    java.util.List<Inventory> findByProduct_ProductId(Integer productId);
 }

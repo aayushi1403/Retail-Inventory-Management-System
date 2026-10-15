@@ -27,6 +27,10 @@ public class PurchaseOrderItemService {
         return repository.findAll();
     }
 
+    public List<PurchaseOrderItem> getItemsByPurchaseOrderId(Integer purchaseOrderId) {
+        return repository.findByPurchaseOrder_PurchaseOrderId(purchaseOrderId);
+    }
+
     public Optional<PurchaseOrderItem> getItemById(Integer id) {
         return repository.findById(id);
     }

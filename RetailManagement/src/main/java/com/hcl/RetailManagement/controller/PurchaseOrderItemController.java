@@ -31,6 +31,11 @@ public class PurchaseOrderItemController {
         return service.getAllItems();
     }
 
+    @GetMapping("/order/{orderId}")
+    public List<PurchaseOrderItem> getItemsByPurchaseOrderId(@PathVariable Integer orderId) {
+        return service.getItemsByPurchaseOrderId(orderId);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<PurchaseOrderItem> getItemById(
             @PathVariable Integer id) {

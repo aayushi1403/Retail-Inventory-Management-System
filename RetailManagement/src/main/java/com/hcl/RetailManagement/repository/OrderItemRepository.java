@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface OrderItemRepository
         extends JpaRepository<OrderItem, Integer> {
-
+    java.util.List<OrderItem> findByOrder_OrderId(Integer orderId);
 }

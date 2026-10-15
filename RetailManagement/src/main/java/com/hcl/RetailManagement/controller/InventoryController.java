@@ -39,6 +39,21 @@ public class InventoryController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/warehouse/{warehouseId}")
+    public List<Inventory> getByWarehouse(@PathVariable Integer warehouseId) {
+        return inventoryService.getByWarehouse(warehouseId);
+    }
+
+    @GetMapping("/product/{productId}")
+    public List<Inventory> getByProduct(@PathVariable Integer productId) {
+        return inventoryService.getByProduct(productId);
+    }
+
+    @GetMapping("/low-stock")
+    public List<Inventory> getLowStockInventory() {
+        return inventoryService.getLowStockInventory();
+    }
+
     @GetMapping("/product/{productId}/warehouse/{warehouseId}")
     public ResponseEntity<Inventory> getByProductAndWarehouse(
             @PathVariable Integer productId,

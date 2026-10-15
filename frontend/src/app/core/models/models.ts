@@ -1,3 +1,23 @@
+export interface Role {
+  roleId?: number;
+  roleName: string;
+  description?: string;
+}
+
+export interface User {
+  userId?: number;
+  firstName: string;
+  lastName?: string;
+  email: string;
+  phone?: string;
+  role?: Role;
+  roleName?: string;
+  roleDescription?: string;
+  status?: string;
+  createdAt?: string;
+  permissions?: string[];
+}
+
 export interface Category {
   categoryId?: number;
   categoryName: string;
@@ -7,7 +27,7 @@ export interface Category {
 
 export interface Product {
   productId?: number;
-  category: Category;
+  category?: Category;
   productName: string;
   sku: string;
   description?: string;
@@ -51,11 +71,20 @@ export interface PurchaseOrder {
   purchaseOrderId?: number;
   supplier: Supplier;
   warehouse: Warehouse;
-  createdBy?: any; // User model if needed
+  createdBy?: User;
   orderDate: string;
   expectedDate?: string;
   status?: string;
   totalAmount: number;
+}
+
+export interface PurchaseOrderItem {
+  purchaseOrderItemId?: number;
+  purchaseOrder?: PurchaseOrder;
+  product: Product;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
 }
 
 export interface CustomerOrder {
@@ -70,6 +99,15 @@ export interface CustomerOrder {
   totalAmount: number;
 }
 
+export interface OrderItem {
+  orderItemId?: number;
+  order?: CustomerOrder;
+  product: Product;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
 export interface StockTransfer {
   transferId?: number;
   product: Product;
@@ -78,5 +116,19 @@ export interface StockTransfer {
   quantity: number;
   transferDate?: string;
   status?: string;
-  createdBy?: any; // User model if needed
+  createdBy?: User;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+  message: string;
+}
+
+export interface ToastMessage {
+  id: string;
+  type: 'success' | 'info' | 'warning' | 'error';
+  title?: string;
+  message: string;
+  timestamp: Date;
 }

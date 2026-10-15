@@ -16,6 +16,18 @@ export class InventoryService {
     return this.http.get<Inventory[]>(this.apiUrl);
   }
 
+  getByWarehouse(warehouseId: number): Observable<Inventory[]> {
+    return this.http.get<Inventory[]>(`${this.apiUrl}/warehouse/${warehouseId}`);
+  }
+
+  getByProduct(productId: number): Observable<Inventory[]> {
+    return this.http.get<Inventory[]>(`${this.apiUrl}/product/${productId}`);
+  }
+
+  getLowStock(): Observable<Inventory[]> {
+    return this.http.get<Inventory[]>(`${this.apiUrl}/low-stock`);
+  }
+
   getById(id: number): Observable<Inventory> {
     return this.http.get<Inventory>(`${this.apiUrl}/${id}`);
   }

@@ -29,6 +29,11 @@ public class OrderItemController {
         return service.getAllItems();
     }
 
+    @GetMapping("/order/{orderId}")
+    public List<OrderItem> getItemsByOrderId(@PathVariable Integer orderId) {
+        return service.getItemsByOrderId(orderId);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<OrderItem> getItemById(
             @PathVariable Integer id) {
