@@ -25,11 +25,30 @@ public class AuthService {
 
     public AuthResponse login(AuthRequest request) {
         if (request.getEmail() == null || request.getPassword() == null) {
-            throw new IllegalArgumentException("Email and password are required.");
+            throw new IllegalArgumentException("User ID / Email and password are required.");
         }
 
-        User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
-                .orElseThrow(() -> new RuntimeException("Invalid email or password."));
+        String identifier = request.getEmail().trim();
+        if (identifier.startsWith("#")) {
+            identifier = identifier.substring(1).trim();
+        }
+
+        User user = null;
+        if (identifier.matches("\\d+")) {
+            try {
+                Integer uid = Integer.parseInt(identifier);
+                user = userRepository.findById(uid).orElse(null);
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (user == null) {
+            user = userRepository.findByEmail(identifier.toLowerCase()).orElse(null);
+        }
+
+        if (user == null) {
+            throw new RuntimeException("Invalid User ID / email or password.");
+        }
 
         if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
             throw new RuntimeException("Account is currently inactive. Please contact your system administrator.");
@@ -37,7 +56,7 @@ public class AuthService {
 
         // Support direct comparison or bcrypt match
         if (!user.getPassword().equals(request.getPassword().trim())) {
-            throw new RuntimeException("Invalid email or password.");
+            throw new RuntimeException("Invalid User ID / email or password.");
         }
 
         String token = generateToken(user);

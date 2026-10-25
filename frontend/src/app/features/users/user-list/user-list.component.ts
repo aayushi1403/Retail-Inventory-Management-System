@@ -31,22 +31,26 @@ import { User, Role } from '../../../core/models/models';
         <table class="rf-table">
           <thead>
             <tr>
-              <th>User Name & Details</th>
+              <th style="width: 80px;">User ID</th>
+              <th>User Name & Profile</th>
               <th>Email Address</th>
               <th>Role Assignment</th>
               <th>Phone</th>
-              <th>Account Status</th>
-              <th class="text-right">Actions</th>
+              <th>Status</th>
+              <th class="text-right">Admin Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let u of users">
               <td>
+                <span class="user-id-badge">#{{ u.userId }}</span>
+              </td>
+              <td>
                 <div class="flex items-center gap-3">
                   <div class="user-table-avatar">{{ getInitials(u) }}</div>
                   <div>
                     <div class="font-bold text-main">{{ u.firstName }} {{ u.lastName || '' }}</div>
-                    <div class="text-muted font-mono" style="font-size: 0.6875rem;">UID: #{{ u.userId }}</div>
+                    <div class="text-muted" style="font-size: 0.6875rem;">Created {{ (u.createdAt | date:'mediumDate') || 'Standard' }}</div>
                   </div>
                 </div>
               </td>
@@ -64,8 +68,11 @@ import { User, Role } from '../../../core/models/models';
               </td>
               <td class="text-right">
                 <div class="flex items-center justify-end gap-2">
-                  <button (click)="openEditRoleModal(u)" class="rf-btn rf-btn-secondary rf-btn-sm">
+                  <button (click)="openEditRoleModal(u)" class="rf-btn rf-btn-secondary rf-btn-sm" title="Change business role permissions">
                     Assign Role
+                  </button>
+                  <button (click)="openResetPasswordModal(u)" class="rf-btn rf-btn-ghost rf-btn-sm" title="Reset user password">
+                    Reset PWD
                   </button>
                   <button (click)="toggleUserStatus(u)" class="rf-btn rf-btn-ghost rf-btn-sm" [class.text-danger]="u.status === 'ACTIVE'">
                     {{ u.status === 'ACTIVE' ? 'Deactivate' : 'Activate' }}
@@ -85,9 +92,9 @@ import { User, Role } from '../../../core/models/models';
 
       <!-- Edit Role Modal -->
       <div class="rf-modal-backdrop" *ngIf="selectedUserForRole">
-        <div class="rf-modal" style="max-width: 460px;">
+        <div class="rf-modal" style="max-width: 480px;">
           <div class="rf-modal-header">
-            <div class="rf-modal-title">Assign Role to {{ selectedUserForRole.firstName }}</div>
+            <div class="rf-modal-title">Assign Role to {{ selectedUserForRole.firstName }} (UID #{{ selectedUserForRole.userId }})</div>
             <button class="rf-btn rf-btn-ghost rf-btn-sm" (click)="selectedUserForRole = null">✕</button>
           </div>
           <form (ngSubmit)="saveUserRole()" class="rf-modal-body">
@@ -98,12 +105,45 @@ import { User, Role } from '../../../core/models/models';
                   {{ r.roleName | uppercase }} — {{ r.description }}
                 </option>
               </select>
+              <p class="text-muted" style="font-size: 0.75rem; margin-top: 0.5rem;">
+                Modifying a user's role will dynamically grant or restrict system modules and operational workflows.
+              </p>
             </div>
             <div class="rf-modal-footer" style="padding-left: 0; padding-right: 0; margin-bottom: -0.5rem;">
               <button type="button" class="rf-btn rf-btn-secondary" (click)="selectedUserForRole = null">Cancel</button>
               <button type="submit" class="rf-btn rf-btn-primary" [disabled]="saving">
                 <span *ngIf="saving">Updating Role...</span>
                 <span *ngIf="!saving">Apply Role</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Reset Password Modal -->
+      <div class="rf-modal-backdrop" *ngIf="selectedUserForPassword">
+        <div class="rf-modal" style="max-width: 440px;">
+          <div class="rf-modal-header">
+            <div class="rf-modal-title">Reset Password: {{ selectedUserForPassword.firstName }} (UID #{{ selectedUserForPassword.userId }})</div>
+            <button class="rf-btn rf-btn-ghost rf-btn-sm" (click)="selectedUserForPassword = null">✕</button>
+          </div>
+          <form (ngSubmit)="saveNewPassword()" class="rf-modal-body">
+            <div class="rf-form-group">
+              <label class="rf-label">New Password *</label>
+              <input 
+                type="password" 
+                class="rf-input" 
+                [(ngModel)]="resetPasswordValue" 
+                name="newPwd" 
+                placeholder="Enter new secure password" 
+                required 
+              />
+            </div>
+            <div class="rf-modal-footer" style="padding-left: 0; padding-right: 0; margin-bottom: -0.5rem;">
+              <button type="button" class="rf-btn rf-btn-secondary" (click)="selectedUserForPassword = null">Cancel</button>
+              <button type="submit" class="rf-btn rf-btn-primary" [disabled]="saving || !resetPasswordValue">
+                <span *ngIf="saving">Updating Password...</span>
+                <span *ngIf="!saving">Set New Password</span>
               </button>
             </div>
           </form>
@@ -197,6 +237,18 @@ import { User, Role } from '../../../core/models/models';
     .pill-procurement { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
     .pill-customer { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
 
+    .user-id-badge {
+      font-family: var(--font-mono, monospace);
+      font-weight: 700;
+      font-size: 0.8125rem;
+      background: #f1f5f9;
+      color: #334155;
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #cbd5e1;
+      display: inline-block;
+    }
+
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -211,6 +263,9 @@ export class UserListComponent implements OnInit {
 
   selectedUserForRole: User | null = null;
   newRoleId: any = '';
+
+  selectedUserForPassword: User | null = null;
+  resetPasswordValue = '';
 
   showAddUserModal = false;
   newUser: Partial<User> = { firstName: '', lastName: '', email: '', phone: '', status: 'ACTIVE' };
@@ -313,6 +368,36 @@ export class UserListComponent implements OnInit {
     });
   }
 
+  openResetPasswordModal(user: User) {
+    this.selectedUserForPassword = user;
+    this.resetPasswordValue = '';
+  }
+
+  saveNewPassword() {
+    if (!this.selectedUserForPassword?.userId || !this.resetPasswordValue) return;
+    this.saving = true;
+
+    const payload: User = {
+      ...this.selectedUserForPassword,
+      password: this.resetPasswordValue
+    };
+
+    this.userService.update(this.selectedUserForPassword.userId, payload).subscribe({
+      next: () => {
+        this.saving = false;
+        this.notificationService.success(
+          `Password updated successfully for ${this.selectedUserForPassword?.firstName} (User ID #${this.selectedUserForPassword?.userId}).`
+        );
+        this.selectedUserForPassword = null;
+        this.resetPasswordValue = '';
+      },
+      error: (err) => {
+        this.saving = false;
+        this.notificationService.error(err.error?.message || 'Failed to update password');
+      }
+    });
+  }
+
   openAddUserModal() {
     this.newUser = { firstName: '', lastName: '', email: '', phone: '', status: 'ACTIVE' };
     this.newUserPassword = '';
@@ -337,10 +422,13 @@ export class UserListComponent implements OnInit {
     };
 
     this.userService.create(payload).subscribe({
-      next: () => {
+      next: (created: User) => {
         this.saving = false;
         this.showAddUserModal = false;
-        this.notificationService.success(`User account for ${payload.firstName} created successfully.`);
+        const uid = created.userId ? `#${created.userId}` : '';
+        this.notificationService.success(
+          `User account for ${created.firstName || payload.firstName} created successfully with User ID ${uid}! They can now log in using User ID ${uid} or email.`
+        );
         this.loadData();
       },
       error: (err) => {

@@ -22,98 +22,238 @@ import { NotificationService } from '../../../core/services/notification.service
             </svg>
           </div>
           <h1>RetailFlow Enterprise</h1>
-          <p class="login-tagline">Retail Operations & Multi-Warehouse Inventory OS</p>
+          <p class="login-tagline">Retail Operations & Role-Based Inventory OS</p>
         </div>
 
-        <!-- Demo Persona Quick Selectors -->
-        <div class="demo-section">
-          <div class="demo-title">TEST PERSONAS (1-CLICK SIGN IN)</div>
-          <div class="persona-chips">
-            <button 
-              type="button" 
-              class="persona-chip chip-admin"
-              (click)="quickSignIn('admin')"
-            >
-              <span class="chip-dot"></span>
-              <span class="chip-name">Admin (Alex)</span>
-            </button>
-            <button 
-              type="button" 
-              class="persona-chip chip-manager"
-              (click)="quickSignIn('manager')"
-            >
-              <span class="chip-dot"></span>
-              <span class="chip-name">Manager (Marcus)</span>
-            </button>
-            <button 
-              type="button" 
-              class="persona-chip chip-retailer"
-              (click)="quickSignIn('retailer')"
-            >
-              <span class="chip-dot"></span>
-              <span class="chip-name">Retailer (Sophia)</span>
-            </button>
-            <button 
-              type="button" 
-              class="persona-chip chip-procure"
-              (click)="quickSignIn('procurement')"
-            >
-              <span class="chip-dot"></span>
-              <span class="chip-name">Procurement (David)</span>
-            </button>
-            <button 
-              type="button" 
-              class="persona-chip chip-customer"
-              (click)="quickSignIn('customer')"
-            >
-              <span class="chip-dot"></span>
-              <span class="chip-name">Customer (Emma)</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="divider">
-          <span>OR SIGN IN WITH CREDENTIALS</span>
-        </div>
-
-        <!-- Login Form -->
-        <form (ngSubmit)="onSubmit()" class="login-form">
-          <div class="rf-form-group">
-            <label class="rf-label">Work Email</label>
-            <input 
-              type="email" 
-              class="rf-input" 
-              [(ngModel)]="email" 
-              name="email" 
-              placeholder="e.g. admin@retailflow.com" 
-              required
-            />
-          </div>
-
-          <div class="rf-form-group">
-            <label class="rf-label">Password</label>
-            <input 
-              type="password" 
-              class="rf-input" 
-              [(ngModel)]="password" 
-              name="password" 
-              placeholder="••••••••" 
-              required
-            />
-          </div>
-
+        <!-- Mode Toggle Tabs -->
+        <div class="auth-tabs">
           <button 
-            type="submit" 
-            class="rf-btn rf-btn-primary w-full" 
-            [disabled]="loading || !email || !password"
+            type="button" 
+            class="auth-tab" 
+            [class.active]="activeTab === 'login'" 
+            (click)="activeTab = 'login'"
           >
-            <span *ngIf="loading">Signing in to workspace...</span>
-            <span *ngIf="!loading">Sign In to Dashboard</span>
+            Sign In
           </button>
-        </form>
+          <button 
+            type="button" 
+            class="auth-tab" 
+            [class.active]="activeTab === 'register'" 
+            (click)="activeTab = 'register'"
+          >
+            Create Account
+          </button>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 1: SIGN IN FORM                            -->
+        <!-- ============================================== -->
+        <div *ngIf="activeTab === 'login'">
+          <!-- Demo Persona Quick Selectors -->
+          <div class="demo-section">
+            <div class="demo-title">QUICK TEST ACCESS (1-CLICK ROLES)</div>
+            <div class="persona-chips">
+              <button 
+                type="button" 
+                class="persona-chip chip-admin"
+                (click)="quickSignIn('admin')"
+                title="Super Admin - alex Vance"
+              >
+                <span class="chip-dot"></span>
+                <span class="chip-name">Admin (UID #1)</span>
+              </button>
+              <button 
+                type="button" 
+                class="persona-chip chip-manager"
+                (click)="quickSignIn('manager')"
+                title="Warehouse Manager - Marcus Lee"
+              >
+                <span class="chip-dot"></span>
+                <span class="chip-name">Manager (UID #2)</span>
+              </button>
+              <button 
+                type="button" 
+                class="persona-chip chip-retailer"
+                (click)="quickSignIn('retailer')"
+                title="Store Retailer - Sophia Patel"
+              >
+                <span class="chip-dot"></span>
+                <span class="chip-name">Retailer (UID #3)</span>
+              </button>
+              <button 
+                type="button" 
+                class="persona-chip chip-procure"
+                (click)="quickSignIn('procurement')"
+                title="Procurement Specialist - David Miller"
+              >
+                <span class="chip-dot"></span>
+                <span class="chip-name">Procurement (UID #4)</span>
+              </button>
+              <button 
+                type="button" 
+                class="persona-chip chip-customer"
+                (click)="quickSignIn('customer')"
+                title="Customer - Emma Watson"
+              >
+                <span class="chip-dot"></span>
+                <span class="chip-name">Customer (UID #5)</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="divider">
+            <span>OR SIGN IN WITH USER ID / EMAIL</span>
+          </div>
+
+          <form (ngSubmit)="onLogin()" class="auth-form">
+            <div class="rf-form-group">
+              <label class="rf-label">Work Email or User ID</label>
+              <input 
+                type="text" 
+                class="rf-input" 
+                [(ngModel)]="loginIdentifier" 
+                name="identifier" 
+                placeholder="e.g. admin@retailflow.com or #1" 
+                required
+              />
+              <span class="input-hint">Enter your numeric User ID (e.g. 1) or registered email</span>
+            </div>
+
+            <div class="rf-form-group">
+              <label class="rf-label">Password</label>
+              <input 
+                type="password" 
+                class="rf-input" 
+                [(ngModel)]="loginPassword" 
+                name="password" 
+                placeholder="••••••••" 
+                required
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              class="rf-btn rf-btn-primary w-full" 
+              [disabled]="loading || !loginIdentifier || !loginPassword"
+            >
+              <span *ngIf="loading">Authenticating...</span>
+              <span *ngIf="!loading">Sign In to Dashboard</span>
+            </button>
+          </form>
+
+          <div class="switch-prompt">
+            <span>Don't have an account yet? </span>
+            <button type="button" class="link-btn" (click)="activeTab = 'register'">Create user profile</button>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 2: REGISTER / CREATE ACCOUNT FORM          -->
+        <!-- ============================================== -->
+        <div *ngIf="activeTab === 'register'">
+          <form (ngSubmit)="onRegister()" class="auth-form">
+            <div class="grid-2">
+              <div class="rf-form-group">
+                <label class="rf-label">First Name *</label>
+                <input 
+                  type="text" 
+                  class="rf-input" 
+                  [(ngModel)]="regFirstName" 
+                  name="firstName" 
+                  placeholder="e.g. Sarah" 
+                  required
+                />
+              </div>
+              <div class="rf-form-group">
+                <label class="rf-label">Last Name</label>
+                <input 
+                  type="text" 
+                  class="rf-input" 
+                  [(ngModel)]="regLastName" 
+                  name="lastName" 
+                  placeholder="e.g. Connor"
+                />
+              </div>
+            </div>
+
+            <div class="rf-form-group">
+              <label class="rf-label">Email Address *</label>
+              <input 
+                type="email" 
+                class="rf-input" 
+                [(ngModel)]="regEmail" 
+                name="regEmail" 
+                placeholder="e.g. sarah.connor@retailflow.com" 
+                required
+              />
+            </div>
+
+            <div class="grid-2">
+              <div class="rf-form-group">
+                <label class="rf-label">Password *</label>
+                <input 
+                  type="password" 
+                  class="rf-input" 
+                  [(ngModel)]="regPassword" 
+                  name="regPassword" 
+                  placeholder="••••••••" 
+                  required
+                />
+              </div>
+              <div class="rf-form-group">
+                <label class="rf-label">Confirm Password *</label>
+                <input 
+                  type="password" 
+                  class="rf-input" 
+                  [(ngModel)]="regConfirmPassword" 
+                  name="regConfirmPassword" 
+                  placeholder="••••••••" 
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="rf-form-group">
+                <label class="rf-label">Contact Phone</label>
+                <input 
+                  type="text" 
+                  class="rf-input font-mono" 
+                  [(ngModel)]="regPhone" 
+                  name="regPhone" 
+                  placeholder="+1 (555) 019-2831"
+                />
+              </div>
+              <div class="rf-form-group">
+                <label class="rf-label">Desired Business Role *</label>
+                <select class="rf-select" [(ngModel)]="regRole" name="regRole" required>
+                  <option value="customer">Customer (Store Orders)</option>
+                  <option value="retailer">Store Retailer (POS & Sales)</option>
+                  <option value="manager">Warehouse Manager (Stock & Logistics)</option>
+                  <option value="procurement">Procurement Specialist (Suppliers & PO)</option>
+                  <option value="admin">Super Admin (System Control)</option>
+                </select>
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              class="rf-btn rf-btn-primary w-full" 
+              [disabled]="loading || !regFirstName || !regEmail || !regPassword || !regConfirmPassword"
+            >
+              <span *ngIf="loading">Creating account...</span>
+              <span *ngIf="!loading">Register & Launch Workspace</span>
+            </button>
+          </form>
+
+          <div class="switch-prompt">
+            <span>Already have an account? </span>
+            <button type="button" class="link-btn" (click)="activeTab = 'login'">Sign in here</button>
+          </div>
+        </div>
 
         <div class="login-footer">
-          <span>Connected to Spring Boot API & MySQL database</span>
+          <span>Connected to Spring Boot 4 REST API & MySQL 8.0</span>
         </div>
       </div>
     </div>
@@ -124,23 +264,23 @@ import { NotificationService } from '../../../core/services/notification.service
       display: flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #090d16 100%);
-      padding: 1.5rem;
+      background: radial-gradient(circle at 50% 15%, #1e1b4b 0%, #090d16 100%);
+      padding: 2rem 1rem;
     }
 
     .login-card {
       width: 100%;
-      max-width: 440px;
+      max-width: 480px;
       background: #ffffff;
       border-radius: var(--radius-lg);
       padding: 2.25rem;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.15);
     }
 
     .login-header {
       text-align: center;
-      margin-bottom: 1.75rem;
+      margin-bottom: 1.5rem;
     }
 
     .logo-icon {
@@ -152,8 +292,8 @@ import { NotificationService } from '../../../core/services/notification.service
       align-items: center;
       justify-content: center;
       color: white;
-      margin-bottom: 0.875rem;
-      box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
+      margin-bottom: 0.75rem;
+      box-shadow: 0 8px 16px rgba(99, 102, 241, 0.35);
     }
 
     .login-header h1 {
@@ -169,12 +309,41 @@ import { NotificationService } from '../../../core/services/notification.service
       margin-top: 0.25rem;
     }
 
+    /* Tab switcher */
+    .auth-tabs {
+      display: flex;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: var(--radius-md);
+      margin-bottom: 1.5rem;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #64748b;
+      background: transparent;
+      border: none;
+      border-radius: calc(var(--radius-md) - 2px);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+
+    .auth-tab.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+    }
+
     .demo-section {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: var(--radius-md);
-      padding: 1rem;
-      margin-bottom: 1.5rem;
+      padding: 0.875rem;
+      margin-bottom: 1.25rem;
     }
 
     .demo-title {
@@ -182,7 +351,7 @@ import { NotificationService } from '../../../core/services/notification.service
       font-weight: 700;
       letter-spacing: 0.06em;
       color: #64748b;
-      margin-bottom: 0.625rem;
+      margin-bottom: 0.5rem;
       text-align: center;
     }
 
@@ -196,7 +365,7 @@ import { NotificationService } from '../../../core/services/notification.service
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.5rem 0.625rem;
+      padding: 0.45rem 0.6rem;
       border-radius: var(--radius-sm);
       border: 1px solid #e2e8f0;
       background: #ffffff;
@@ -230,7 +399,7 @@ import { NotificationService } from '../../../core/services/notification.service
     .divider {
       position: relative;
       text-align: center;
-      margin: 1.5rem 0;
+      margin: 1.25rem 0;
     }
 
     .divider::before {
@@ -253,20 +422,68 @@ import { NotificationService } from '../../../core/services/notification.service
       color: #94a3b8;
     }
 
-    .login-form {
-      margin-bottom: 1.5rem;
+    .auth-form {
+      margin-bottom: 1.25rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    .input-hint {
+      display: block;
+      font-size: 0.6875rem;
+      color: #94a3b8;
+      margin-top: 0.25rem;
+    }
+
+    .switch-prompt {
+      text-align: center;
+      font-size: 0.8125rem;
+      color: #64748b;
+      margin-top: 0.75rem;
+    }
+
+    .link-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+    }
+
+    .link-btn:hover {
+      color: var(--primary-dark);
     }
 
     .login-footer {
       text-align: center;
       font-size: 0.75rem;
       color: #94a3b8;
+      margin-top: 1.25rem;
     }
   `]
 })
 export class LoginComponent {
-  email = 'admin@retailflow.com';
-  password = 'admin123';
+  activeTab: 'login' | 'register' = 'login';
+
+  // Login inputs
+  loginIdentifier = 'admin@retailflow.com';
+  loginPassword = 'admin123';
+
+  // Registration inputs
+  regFirstName = '';
+  regLastName = '';
+  regEmail = '';
+  regPassword = '';
+  regConfirmPassword = '';
+  regPhone = '';
+  regRole = 'retailer';
+
   loading = false;
 
   constructor(
@@ -275,18 +492,54 @@ export class LoginComponent {
     private router: Router
   ) {}
 
-  onSubmit() {
-    if (!this.email || !this.password) return;
+  onLogin() {
+    if (!this.loginIdentifier || !this.loginPassword) return;
     this.loading = true;
-    this.authService.login({ email: this.email, password: this.password }).subscribe({
+    this.authService.login({ email: this.loginIdentifier, password: this.loginPassword }).subscribe({
       next: (res) => {
         this.loading = false;
-        this.notificationService.success(`Welcome back, ${res.user.firstName}! Signed in as ${res.user.role?.roleName?.toUpperCase()}.`);
+        const role = (res.user.role?.roleName || (res.user as any).roleName || 'USER').toUpperCase();
+        this.notificationService.success(`Welcome back, ${res.user.firstName}! Signed in with User ID #${res.user.userId} as ${role}.`);
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
         this.loading = false;
-        this.notificationService.error(err.error?.message || 'Invalid credentials or user inactive.');
+        this.notificationService.error(err.error?.message || 'Invalid User ID / email or password.');
+      }
+    });
+  }
+
+  onRegister() {
+    if (!this.regFirstName || !this.regEmail || !this.regPassword) {
+      this.notificationService.warning('Please fill in all required fields.');
+      return;
+    }
+
+    if (this.regPassword !== this.regConfirmPassword) {
+      this.notificationService.error('Passwords do not match. Please verify your password confirmation.');
+      return;
+    }
+
+    this.loading = true;
+    this.authService.register({
+      firstName: this.regFirstName,
+      lastName: this.regLastName,
+      email: this.regEmail,
+      password: this.regPassword,
+      phone: this.regPhone,
+      roleName: this.regRole
+    }).subscribe({
+      next: (res) => {
+        this.loading = false;
+        const role = (res.user.role?.roleName || (res.user as any).roleName || this.regRole).toUpperCase();
+        this.notificationService.success(
+          `Account successfully created! Assigned User ID is #${res.user.userId}. Logged in as ${role}.`
+        );
+        this.router.navigate(['/dashboard']);
+      },
+      error: (err) => {
+        this.loading = false;
+        this.notificationService.error(err.error?.message || 'Failed to create user account.');
       }
     });
   }
@@ -296,7 +549,8 @@ export class LoginComponent {
     this.authService.loginWithDemo(roleKey).subscribe({
       next: (res) => {
         this.loading = false;
-        this.notificationService.success(`Signed in as ${res.user.firstName} (${res.user.role?.roleName?.toUpperCase()}).`);
+        const role = (res.user.role?.roleName || (res.user as any).roleName || roleKey).toUpperCase();
+        this.notificationService.success(`Signed in as ${res.user.firstName} (User ID #${res.user.userId}) — ${role}.`);
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {

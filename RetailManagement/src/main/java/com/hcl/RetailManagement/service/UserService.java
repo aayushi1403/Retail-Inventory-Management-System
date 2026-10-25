@@ -4,6 +4,7 @@ package com.hcl.RetailManagement.service;
 
 
 import com.hcl.RetailManagement.entity.User;
+import com.hcl.RetailManagement.repository.RoleRepository;
 import com.hcl.RetailManagement.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
@@ -14,13 +15,28 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, RoleRepository roleRepository) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
     }
 
     // CREATE
     public User createUser(User user) {
+        if (user.getRole() != null) {
+            if (user.getRole().getRoleId() != null) {
+                roleRepository.findById(user.getRole().getRoleId()).ifPresent(user::setRole);
+            } else if (user.getRole().getRoleName() != null) {
+                roleRepository.findByRoleNameIgnoreCase(user.getRole().getRoleName()).ifPresent(user::setRole);
+            }
+        }
+        if (user.getStatus() == null || user.getStatus().trim().isEmpty()) {
+            user.setStatus("ACTIVE");
+        }
+        if (user.getEmail() != null) {
+            user.setEmail(user.getEmail().trim().toLowerCase());
+        }
         return userRepository.save(user);
     }
 
@@ -41,24 +57,41 @@ public class UserService {
 
     // UPDATE
     public User updateUser(Integer id, User userDetails) {
-
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        user.setRole(userDetails.getRole());
-        user.setFirstName(userDetails.getFirstName());
-        user.setLastName(userDetails.getLastName());
-        user.setEmail(userDetails.getEmail());
-        user.setPassword(userDetails.getPassword());
-        user.setPhone(userDetails.getPhone());
-        user.setStatus(userDetails.getStatus());
+        if (userDetails.getRole() != null) {
+            if (userDetails.getRole().getRoleId() != null) {
+                roleRepository.findById(userDetails.getRole().getRoleId()).ifPresent(user::setRole);
+            } else if (userDetails.getRole().getRoleName() != null) {
+                roleRepository.findByRoleNameIgnoreCase(userDetails.getRole().getRoleName()).ifPresent(user::setRole);
+            }
+        }
+
+        if (userDetails.getFirstName() != null) {
+            user.setFirstName(userDetails.getFirstName());
+        }
+        if (userDetails.getLastName() != null) {
+            user.setLastName(userDetails.getLastName());
+        }
+        if (userDetails.getEmail() != null) {
+            user.setEmail(userDetails.getEmail().trim().toLowerCase());
+        }
+        if (userDetails.getPassword() != null && !userDetails.getPassword().trim().isEmpty()) {
+            user.setPassword(userDetails.getPassword().trim());
+        }
+        if (userDetails.getPhone() != null) {
+            user.setPhone(userDetails.getPhone());
+        }
+        if (userDetails.getStatus() != null) {
+            user.setStatus(userDetails.getStatus());
+        }
 
         return userRepository.save(user);
     }
 
     // DELETE
     public void deleteUser(Integer id) {
-
         if (!userRepository.existsById(id)) {
             throw new RuntimeException("User not found");
         }

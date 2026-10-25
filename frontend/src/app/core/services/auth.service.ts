@@ -106,6 +106,28 @@ export class AuthService {
     );
   }
 
+  register(userData: {
+    firstName: string;
+    lastName?: string;
+    email: string;
+    password: string;
+    phone?: string;
+    roleName?: string;
+  }): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/register`, userData).pipe(
+      tap((res) => {
+        if (res && res.token && res.user) {
+          if (!res.user.role && (res.user as any).roleName) {
+            res.user.role = { roleName: (res.user as any).roleName, description: (res.user as any).roleDescription };
+          }
+          localStorage.setItem('rf_token', res.token);
+          localStorage.setItem('rf_user', JSON.stringify(res.user));
+          this.currentUserSubject.next(res.user);
+        }
+      })
+    );
+  }
+
   loginWithDemo(roleKey: 'admin' | 'manager' | 'retailer' | 'procurement' | 'customer'): Observable<AuthResponse> {
     const passwords: Record<string, string> = {
       admin: 'admin123',
