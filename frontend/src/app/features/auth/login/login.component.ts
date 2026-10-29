@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 
@@ -70,6 +70,15 @@ import { NotificationService } from '../../../core/services/notification.service
               >
                 <span class="chip-dot"></span>
                 <span class="chip-name">Manager (UID #2)</span>
+              </button>
+              <button 
+                type="button" 
+                class="persona-chip chip-staff"
+                (click)="quickSignIn('staff')"
+                title="Retail Staff - Tyler Durden"
+              >
+                <span class="chip-dot"></span>
+                <span class="chip-name">Staff (UID #6)</span>
               </button>
               <button 
                 type="button" 
@@ -225,14 +234,13 @@ import { NotificationService } from '../../../core/services/notification.service
                 />
               </div>
               <div class="rf-form-group">
-                <label class="rf-label">Desired Business Role *</label>
+                <label class="rf-label">Account Role *</label>
                 <select class="rf-select" [(ngModel)]="regRole" name="regRole" required>
+                  <option value="staff">Retail Operations Staff (Default)</option>
                   <option value="customer">Customer (Store Orders)</option>
                   <option value="retailer">Store Retailer (POS & Sales)</option>
-                  <option value="manager">Warehouse Manager (Stock & Logistics)</option>
-                  <option value="procurement">Procurement Specialist (Suppliers & PO)</option>
-                  <option value="admin">Super Admin (System Control)</option>
                 </select>
+                <span class="input-hint">Admin and Manager roles require internal administrative assignment.</span>
               </div>
             </div>
 
@@ -392,6 +400,7 @@ import { NotificationService } from '../../../core/services/notification.service
 
     .chip-admin .chip-dot { background: #4f46e5; }
     .chip-manager .chip-dot { background: #10b981; }
+    .chip-staff .chip-dot { background: #06b6d4; }
     .chip-retailer .chip-dot { background: #f59e0b; }
     .chip-procure .chip-dot { background: #3b82f6; }
     .chip-customer .chip-dot { background: #a855f7; }
@@ -482,15 +491,22 @@ export class LoginComponent {
   regPassword = '';
   regConfirmPassword = '';
   regPhone = '';
-  regRole = 'retailer';
+  regRole = 'staff';
 
   loading = false;
 
   constructor(
     private authService: AuthService,
     private notificationService: NotificationService,
-    private router: Router
-  ) {}
+    private router: Router,
+    private route: ActivatedRoute
+  ) {
+    this.route.url.subscribe(segments => {
+      if (segments.some(s => s.path === 'signup' || s.path === 'register')) {
+        this.activeTab = 'register';
+      }
+    });
+  }
 
   onLogin() {
     if (!this.loginIdentifier || !this.loginPassword) return;
@@ -539,12 +555,17 @@ export class LoginComponent {
       },
       error: (err) => {
         this.loading = false;
-        this.notificationService.error(err.error?.message || 'Failed to create user account.');
+        if (err.error?.fieldErrors) {
+          const firstError = Object.values(err.error.fieldErrors)[0];
+          this.notificationService.error(String(firstError) || 'Validation failed.');
+        } else {
+          this.notificationService.error(err.error?.message || 'Failed to create user account.');
+        }
       }
     });
   }
 
-  quickSignIn(roleKey: 'admin' | 'manager' | 'retailer' | 'procurement' | 'customer') {
+  quickSignIn(roleKey: 'admin' | 'manager' | 'staff' | 'retailer' | 'procurement' | 'customer') {
     this.loading = true;
     this.authService.loginWithDemo(roleKey).subscribe({
       next: (res) => {

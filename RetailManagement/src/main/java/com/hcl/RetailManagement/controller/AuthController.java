@@ -5,11 +5,13 @@ import com.hcl.RetailManagement.dto.AuthResponse;
 import com.hcl.RetailManagement.dto.RegisterRequest;
 import com.hcl.RetailManagement.dto.UserDto;
 import com.hcl.RetailManagement.service.AuthService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
 import java.util.Map;
 
 @RestController
@@ -22,37 +24,68 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthRequest request) {
-        try {
-            AuthResponse response = authService.login(request);
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
-        }
+    /**
+     * User registration / sign up endpoint
+     */
+    @PostMapping("/signup")
+    public ResponseEntity<AuthResponse> signup(@Valid @RequestBody RegisterRequest request) {
+        AuthResponse response = authService.register(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    /**
+     * Backward-compatible alias for signup
+     */
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-        try {
-            AuthResponse response = authService.register(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return signup(request);
     }
 
+    /**
+     * User authentication / login endpoint
+     */
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
+        AuthResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Returns the safe profile of the currently authenticated user
+     */
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(@RequestHeader(value = "Authorization", required = false) String token) {
-        if (token == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Authorization header required"));
+    public ResponseEntity<?> getCurrentUser(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
+            String email = authentication.getName();
+            UserDto user = authService.getCurrentUserByEmail(email);
+            return ResponseEntity.ok(user);
         }
-        UserDto user = authService.getCurrentUser(token);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid or expired token"));
+
+        // Fallback to token header if available
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            UserDto user = authService.getCurrentUser(authHeader);
+            if (user != null) {
+                return ResponseEntity.ok(user);
+            }
         }
-        return ResponseEntity.ok(user);
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("message", "Full authentication is required to access profile"));
+    }
+
+    /**
+     * Stateless JWT logout endpoint with token revocation
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader != null) {
+            authService.logout(authHeader);
+        }
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.ok(Map.of("message", "Successfully logged out. Token has been revoked."));
     }
 }

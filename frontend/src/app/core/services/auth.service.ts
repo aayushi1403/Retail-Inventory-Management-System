@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, tap, catchError, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthResponse, User } from '../models/models';
 
@@ -35,6 +35,13 @@ export class AuthService {
       role: 'manager',
       badge: 'Warehouse Manager',
       description: 'Stock levels, transfers, receiving orders'
+    },
+    staff: {
+      email: 'staff@retailflow.com',
+      name: 'Tyler Durden',
+      role: 'staff',
+      badge: 'Retail Staff',
+      description: 'Store operations & stock transactions'
     },
     retailer: {
       email: 'retailer@retailflow.com',
@@ -73,6 +80,10 @@ export class AuthService {
           user.role = { roleName: (user as any).roleName, description: (user as any).roleDescription };
         }
         this.currentUserSubject.next(user);
+        // Refresh profile in background to verify token validity
+        this.getProfile().subscribe({
+          error: () => this.logout()
+        });
       } catch (e) {
         this.logout();
       }
@@ -114,7 +125,7 @@ export class AuthService {
     phone?: string;
     roleName?: string;
   }): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/register`, userData).pipe(
+    return this.http.post<AuthResponse>(`${this.apiUrl}/signup`, userData).pipe(
       tap((res) => {
         if (res && res.token && res.user) {
           if (!res.user.role && (res.user as any).roleName) {
@@ -128,10 +139,25 @@ export class AuthService {
     );
   }
 
-  loginWithDemo(roleKey: 'admin' | 'manager' | 'retailer' | 'procurement' | 'customer'): Observable<AuthResponse> {
+  getProfile(): Observable<User> {
+    return this.http.get<User>(`${this.apiUrl}/me`).pipe(
+      tap((user) => {
+        if (user) {
+          if (!user.role && (user as any).roleName) {
+            user.role = { roleName: (user as any).roleName, description: (user as any).roleDescription };
+          }
+          localStorage.setItem('rf_user', JSON.stringify(user));
+          this.currentUserSubject.next(user);
+        }
+      })
+    );
+  }
+
+  loginWithDemo(roleKey: 'admin' | 'manager' | 'staff' | 'retailer' | 'procurement' | 'customer'): Observable<AuthResponse> {
     const passwords: Record<string, string> = {
       admin: 'admin123',
       manager: 'manager123',
+      staff: 'staff123',
       retailer: 'retail123',
       procurement: 'procure123',
       customer: 'customer123'
@@ -139,11 +165,17 @@ export class AuthService {
     const demo = this.DEMO_USERS[roleKey];
     return this.login({
       email: demo.email,
-      password: passwords[roleKey] || 'admin123'
+      password: passwords[roleKey] || 'staff123'
     });
   }
 
   logout() {
+    const token = this.token;
+    if (token) {
+      this.http.post(`${this.apiUrl}/logout`, {}).pipe(
+        catchError(() => of(null))
+      ).subscribe();
+    }
     localStorage.removeItem('rf_token');
     localStorage.removeItem('rf_user');
     this.currentUserSubject.next(null);

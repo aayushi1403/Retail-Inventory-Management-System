@@ -6,8 +6,14 @@ import com.hcl.RetailManagement.dto.RegisterRequest;
 import com.hcl.RetailManagement.dto.UserDto;
 import com.hcl.RetailManagement.entity.Role;
 import com.hcl.RetailManagement.entity.User;
+import com.hcl.RetailManagement.exception.EmailAlreadyExistsException;
+import com.hcl.RetailManagement.exception.InvalidCredentialsException;
+import com.hcl.RetailManagement.exception.ResourceNotFoundException;
 import com.hcl.RetailManagement.repository.RoleRepository;
 import com.hcl.RetailManagement.repository.UserRepository;
+import com.hcl.RetailManagement.security.JwtService;
+import com.hcl.RetailManagement.security.TokenRevocationService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -17,15 +23,25 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final TokenRevocationService tokenRevocationService;
 
-    public AuthService(UserRepository userRepository, RoleRepository roleRepository) {
+    public AuthService(UserRepository userRepository,
+                       RoleRepository roleRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtService jwtService,
+                       TokenRevocationService tokenRevocationService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.tokenRevocationService = tokenRevocationService;
     }
 
     public AuthResponse login(AuthRequest request) {
         if (request.getEmail() == null || request.getPassword() == null) {
-            throw new IllegalArgumentException("User ID / Email and password are required.");
+            throw new IllegalArgumentException("Email / User ID and password are required.");
         }
 
         String identifier = request.getEmail().trim();
@@ -47,22 +63,37 @@ public class AuthService {
         }
 
         if (user == null) {
-            throw new RuntimeException("Invalid User ID / email or password.");
+            throw new InvalidCredentialsException("Invalid User ID / email or password.");
         }
 
         if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
             throw new RuntimeException("Account is currently inactive. Please contact your system administrator.");
         }
 
-        // Support direct comparison or bcrypt match
-        if (!user.getPassword().equals(request.getPassword().trim())) {
-            throw new RuntimeException("Invalid User ID / email or password.");
+        String storedPassword = user.getPassword();
+        boolean passwordMatches = false;
+
+        // Check if already BCrypt encoded ($2a$, $2b$, or $2y$)
+        if (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2y$")) {
+            passwordMatches = passwordEncoder.matches(request.getPassword().trim(), storedPassword);
+        } else {
+            // Legacy plaintext fallback: transparently upgrade to BCrypt
+            if (storedPassword.equals(request.getPassword().trim())) {
+                passwordMatches = true;
+                user.setPassword(passwordEncoder.encode(request.getPassword().trim()));
+                userRepository.save(user);
+            }
         }
 
-        String token = generateToken(user);
+        if (!passwordMatches) {
+            throw new InvalidCredentialsException("Invalid User ID / email or password.");
+        }
+
+        List<String> permissions = getPermissionsForRole(user.getRole() != null ? user.getRole().getRoleName() : null);
+        String token = jwtService.generateToken(user, permissions);
         UserDto userDto = toUserDto(user);
 
-        return new AuthResponse(token, userDto, "Authentication successful");
+        return new AuthResponse(token, jwtService.getExpirationTime(), userDto, "Authentication successful");
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -71,42 +102,64 @@ public class AuthService {
         }
 
         String email = request.getEmail().trim().toLowerCase();
-        if (userRepository.findByEmail(email).isPresent()) {
-            throw new RuntimeException("An account with this email already exists.");
+        if (userRepository.existsByEmail(email)) {
+            throw new EmailAlreadyExistsException("An account with this email already exists: " + email);
         }
 
-        String roleName = request.getRoleName() != null ? request.getRoleName() : "RETAILER";
-        Role role = roleRepository.findByRoleNameIgnoreCase(roleName)
-                .orElseGet(() -> roleRepository.findAll().stream().findFirst().orElseThrow(
-                        () -> new RuntimeException("No valid role found.")
-                ));
+        // Prevent privilege escalation: public registration defaults to STAFF or safe non-admin roles
+        String requestedRole = request.getRoleName();
+        String safeRoleName = "STAFF";
+        if (requestedRole != null) {
+            String normalized = requestedRole.trim().toUpperCase();
+            if (normalized.contains("ADMIN") || normalized.contains("MANAGER")) {
+                // Deny privilege escalation to admin/manager from public sign up
+                safeRoleName = "STAFF";
+            } else if (normalized.contains("CUSTOMER")) {
+                safeRoleName = "CUSTOMER";
+            } else if (normalized.contains("RETAIL") || normalized.contains("STAFF")) {
+                safeRoleName = "STAFF";
+            } else {
+                safeRoleName = "STAFF";
+            }
+        }
+
+        final String targetRoleName = safeRoleName;
+        Role role = roleRepository.findByRoleNameIgnoreCase(targetRoleName)
+                .orElseGet(() -> roleRepository.findByRoleNameIgnoreCase("STAFF")
+                        .orElseGet(() -> roleRepository.findByRoleNameIgnoreCase("RETAILER")
+                                .orElseGet(() -> {
+                                    Role newRole = new Role();
+                                    newRole.setRoleName("STAFF");
+                                    newRole.setDescription("Retail Operations Staff Member");
+                                    return roleRepository.save(newRole);
+                                })));
 
         User user = new User();
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
+        user.setFirstName(request.getFirstName().trim());
+        user.setLastName(request.getLastName() != null ? request.getLastName().trim() : null);
         user.setEmail(email);
-        user.setPassword(request.getPassword().trim());
-        user.setPhone(request.getPhone());
+        user.setPassword(passwordEncoder.encode(request.getPassword().trim()));
+        user.setPhone(request.getPhone() != null ? request.getPhone().trim() : null);
         user.setRole(role);
         user.setStatus("ACTIVE");
 
         User savedUser = userRepository.save(user);
-        String token = generateToken(savedUser);
+
+        List<String> permissions = getPermissionsForRole(role.getRoleName());
+        String token = jwtService.generateToken(savedUser, permissions);
         UserDto userDto = toUserDto(savedUser);
 
-        return new AuthResponse(token, userDto, "Registration successful");
+        return new AuthResponse(token, jwtService.getExpirationTime(), userDto, "Registration successful");
     }
 
     public UserDto getCurrentUser(String token) {
         if (token != null && token.startsWith("Bearer ")) {
-            token = token.substring(7);
+            token = token.substring(7).trim();
         }
 
-        // Token format: base64(email:timestamp) or simple token
-        if (token != null) {
+        if (token != null && !tokenRevocationService.isRevoked(token) && jwtService.isTokenValid(token)) {
             try {
-                String decoded = new String(Base64.getDecoder().decode(token));
-                String email = decoded.split(":")[0];
+                String email = jwtService.extractUsername(token);
                 return userRepository.findByEmail(email)
                         .map(this::toUserDto)
                         .orElse(null);
@@ -115,6 +168,18 @@ public class AuthService {
         }
 
         return null;
+    }
+
+    public UserDto getCurrentUserByEmail(String email) {
+        return userRepository.findByEmail(email.toLowerCase())
+                .map(this::toUserDto)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+    }
+
+    public void logout(String token) {
+        if (token != null) {
+            tokenRevocationService.revokeToken(token);
+        }
     }
 
     public UserDto toUserDto(User user) {
@@ -148,11 +213,11 @@ public class AuthService {
         if (normalized.contains("ADMIN")) {
             return Arrays.asList("*", "admin.access", "users.manage", "products.manage", "inventory.manage",
                     "warehouses.manage", "suppliers.manage", "orders.manage", "transfers.manage", "reports.read");
-        } else if (normalized.contains("MANAGER") || normalized.contains("MODERATOR")) {
+        } else if (normalized.contains("MANAGER")) {
             return Arrays.asList("inventory.read", "inventory.manage", "warehouses.read",
                     "stock_transfers.read", "stock_transfers.create", "stock_transfers.approve",
                     "purchase_orders.read", "purchase_orders.receive", "products.read", "reports.read");
-        } else if (normalized.contains("RETAIL") || normalized.contains("STORE")) {
+        } else if (normalized.contains("STAFF") || normalized.contains("RETAIL") || normalized.contains("STORE")) {
             return Arrays.asList("products.read", "inventory.read", "customer_orders.read",
                     "customer_orders.create", "warehouses.read");
         } else if (normalized.contains("PROCURE") || normalized.contains("SUPPLI")) {
@@ -163,10 +228,5 @@ public class AuthService {
         }
 
         return Arrays.asList("products.read", "inventory.read");
-    }
-
-    private String generateToken(User user) {
-        String payload = user.getEmail() + ":" + System.currentTimeMillis();
-        return Base64.getEncoder().encodeToString(payload.getBytes());
     }
 }
