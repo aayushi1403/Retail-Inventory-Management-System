@@ -12,8 +12,8 @@
 ---
 ## 🌐 Live Deployment
 
-* **Live Application (Frontend):** ([https://YOUR_VERCEL_URL.vercel.app](https://retail-inventory-management-system-mu.vercel.app/))
-* **Backend REST API (Render):** ([https://retail-backend-uwtn.onrender.com](https://retail-backend-uwtn.onrender.com))
+* **Live Application (Frontend):** (https://retail-inventory-management-system-mu.vercel.app/))
+* **Backend REST API (Render):** (https://retail-backend-uwtn.onrender.com))
 * **Cloud Database:** Railway MySQL 8.0
 
 ## 📑 Table of Contents
