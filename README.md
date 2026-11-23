@@ -10,6 +10,11 @@
 > **RetailFlow Enterprise** is a full-stack, enterprise-grade inventory, supply chain, and order fulfillment platform. Engineered for distributed retail operations, it orchestrates multi-warehouse inventory levels, automated low-stock replenishment, supplier procurement workflows, customer sales fulfillment, and granular role-based access control (RBAC).
 
 ---
+## 🌐 Live Deployment
+
+* **Live Application (Frontend):** ([https://YOUR_VERCEL_URL.vercel.app](https://retail-inventory-management-system-mu.vercel.app/))
+* **Backend REST API (Render):** ([https://retail-backend-uwtn.onrender.com](https://retail-backend-uwtn.onrender.com))
+* **Cloud Database:** Railway MySQL 8.0
 
 ## 📑 Table of Contents
 
